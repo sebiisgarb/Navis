@@ -1,0 +1,26 @@
+name: CI
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, web, mobile]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python/Node/Java
+        uses: actions/setup-python@v5
+        if: matrix.project == 'backend'
+        with:
+          python-version: '3.11'
+
+        # TODO: ADD NODE AND JDK
+      - run: echo "Run linters/tests here"
