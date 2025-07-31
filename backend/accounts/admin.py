@@ -7,15 +7,15 @@ admin.site.unregister(Group)
 
 @admin.register(CustomUser)
 class UserAdmin(BaseUserAdmin):
-    ordering = ('email',)
-    list_display = ('id', 'email', 'first_name', 'last_name', 'role', 'is_active', 'is_staff')
+    ordering = ('phone_number',)
+    list_display = ('id', 'phone_number', 'first_name', 'last_name', 'role', 'is_active', 'is_staff')
     list_filter = ('role', 'is_active', 'is_staff')
-    search_fields = ('email', 'first_name', 'last_name')
+    search_fields = ('phone_number', 'first_name', 'last_name')
     readonly_fields = ('last_login',)
 
 
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
+        (None, {'fields': ('phone_number', 'password')}),
         ('Profile', {'fields': ('first_name', 'last_name', 'role')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         ('Important dates', {'fields': ('last_login',)}),
@@ -24,7 +24,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None , {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'password1', 'password2', 'role', 'is_staff', 'is_superuser'),
+            'fields': ('phone_number', 'first_name', 'last_name', 'password1', 'password2', 'role', 'is_staff', 'is_superuser'),
         }),
     )
 
