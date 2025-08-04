@@ -16,12 +16,28 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import PhoneTokenObtainPairView
+from orders.views import OrderViewSet, DeliveryViewSet, DeliveryQueueView
+from logistics.views import AvailableCarsView, StartShiftView
+from locations.views import LocationViewSet
+
+router = DefaultRouter()
+router.register(r"orders", OrderViewSet, basename="orders")
+router.register(r"deliveries", DeliveryViewSet, basename="deliveries")
+router.register(r"locations", LocationViewSet, basename="locations")
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
+
     path('api/token/', PhoneTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # path('api/', include(router.urls)),
+
+    path("api/", include(router.urls)),
+
+    path("api/deliveries/queue/", DeliveryQueueView.as_view(), name="delivery-queue"),
+
+    path("api/cars/available/", AvailableCarsView.as_view(), name="available-cars"),
+    path("api/shifts/start/<int:car_id>/", StartShiftView.as_view(), name="start-shift"),
 ]
