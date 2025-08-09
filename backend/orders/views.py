@@ -1,18 +1,19 @@
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListAPIView
-from rest_framework.decorators import action
 from django.utils.timezone import now
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+
+from accounts.models import Roles
+from logistics.models import DriverShift
 from .models import Order, Delivery
 from .serializers import OrderSerializer, DeliverySerializer
 from .permissions import IsSiteManager, IsDriver
-from orders.permissions import IsSiteManager, IsDriver
-from accounts.models import Roles
-
 
 
 class OrderViewSet(ModelViewSet):
-    serializer_class = OrderSerializer
+    serializer_class   = OrderSerializer
     permission_classes = [IsSiteManager]
 
     def get_queryset(self):
@@ -27,36 +28,58 @@ class OrderViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         order = serializer.save(created_by=self.request.user)
+        # create a pending delivery offer, stamped now()
         Delivery.objects.create(order=order, status="PENDING", offered_at=now())
 
 
 class DeliveryQueueView(ListAPIView):
-    serializer_class = DeliverySerializer
+    """
+    GET /api/deliveries/queue/
+    Only drivers who have started a shift today will see pending offers.
+    """
+    serializer_class   = DeliverySerializer
     permission_classes = [IsDriver]
 
     def get_queryset(self):
         today = now().date()
+        # if driver has no shift today, show nothing
         if not DriverShift.objects.filter(driver=self.request.user, date=today).exists():
             return Delivery.objects.none()
+        # otherwise show all pending
         return Delivery.objects.filter(status="PENDING").order_by("offered_at")
 
 
-
 class DeliveryViewSet(ModelViewSet):
-    serializer_class = DeliverySerializer
-    permission_classe = [IsDriver]
-    queryset = Delivery.objects.select_related("order").all()
+    """
+    Handles GET /api/deliveries/ and POST /api/deliveries/{pk}/accept/
+    """
+    serializer_class   = DeliverySerializer
+    permission_classes = [IsDriver]
+    queryset           = Delivery.objects.select_related("order").all()
 
     @action(detail=True, methods=["post"], permission_classes=[IsDriver])
     def accept(self, request, pk=None):
         delivery = self.get_object()
-        if delivery.status != "PENDING":
-            return Response({"detail": "Already accepted or started"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # only pending offers can be accepted
+        if delivery.status != "PENDING":
+            return Response(
+                {"detail": "Already accepted or started"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # assign driver and update statuses
         delivery.driver = request.user
         delivery.status = "ACCEPTED"
         delivery.accepted_at = now()
-        delivery.order.status = "ASSIGNED"
-        delivery.order.save()
-        delivery.save()
-        return Response(DeliverySerializer(delivery).data, status=status.HTTP_200_OK)
+
+        # also mark the order as assigned
+        order = delivery.order
+        order.status = "ASSIGNED"
+        order.save(update_fields=["status"])
+
+        # save delivery fields
+        delivery.save(update_fields=["driver", "status", "accepted_at"])
+
+        # return serialized delivery (with nested order if your serializer does)
+        return Response(self.get_serializer(delivery).data, status=status.HTTP_200_OK)

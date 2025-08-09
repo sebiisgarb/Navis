@@ -34,10 +34,11 @@ urlpatterns = [
     path('api/token/', PhoneTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-    path("api/", include(router.urls)),
 
     path("api/deliveries/queue/", DeliveryQueueView.as_view(), name="delivery-queue"),
 
     path("api/cars/available/", AvailableCarsView.as_view(), name="available-cars"),
     path("api/shifts/start/<int:car_id>/", StartShiftView.as_view(), name="start-shift"),
+
+    path("api/", include(router.urls)),
 ]
